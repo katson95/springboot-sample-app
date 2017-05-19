@@ -31,6 +31,11 @@ node {
         unstash name: "jar"
         sh "oc start-build ${appName}-docker --from-file=target/app.jar --follow -n ${project}"
     }
+    stage("Approve deployment") {
+        timeout(time:5, unit: 'MINUTES') {
+            input(message:"Deploy application", ok: "GO man, GO!")
+        }
+    }
     stage("Deploy") {
         openshiftDeploy deploymentConfig: appName, namespace: project
     }

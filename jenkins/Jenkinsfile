@@ -15,7 +15,7 @@ node("maven") {
         }
     }
     stage("Checkout") {
-        git url: "https://github.com/tjololo/springboot-sample-app.git", branch: "gradle"
+        git url: "https://github.com/tjololo/springboot-sample-app.git", branch: "cicd-sample"
     }
     stage("Gather buildfacts") {
         pom = readMavenPom file: 'pom.xml'

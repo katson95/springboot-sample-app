@@ -7,13 +7,6 @@ node {
     }
 }
 node("maven") {
-    stage("Check for gradle") {
-        try {
-            sh "gradle --version"
-        } catch (Exception e) {
-            echo "Gradle not present. Continue"
-        }
-    }
     stage("Checkout") {
         git url: "https://github.com/tjololo/springboot-sample-app.git", branch: "cicd-sample"
     }
@@ -31,18 +24,27 @@ node {
         unstash name: "jar"
         sh "oc start-build ${appName}-docker --from-file=target/app.jar --follow -n ${project}"
     }
-    stage("Approve deployment") {
-        timeout(time:5, unit: 'MINUTES') {
-            input(message:"Deploy application", ok: "GO man, GO!")
-        }
-    }
-    stage("Deploy") {
-        openshiftDeploy deploymentConfig: appName, namespace: project
-    }
     stage("Tag image") {
         openshiftTag srcStream: appName, srcTag: "latest", destStream: appName, destTag: pom.version, alias: "false"
     }
-    stage("Print env variables") {
-        sh "printenv"
+    stage("Deploy to dev") {
+        sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=dev | oc apply -f - -n dev"
+        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "dev", destinationNamespace: "dev", alias: false
+        openshiftVerifyDeployment depCfg: appName, namespace: "dev"
+    }
+    stage("Deploy to test") {
+        sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=test | oc apply -f - -n test"
+        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "test", destinationNamespace: "test", alias: false
+        openshiftVerifyDeployment depCfg: appName, namespace: "test"
+    }
+    stage("Deploy to QA environment") {
+        timeout(time: 5, unit: 'MINUTES') {
+            input message: "Deploy to QA?", ok: "GO man, GO!"
+        }
+    }
+    stage("Deploy to qa") {
+        sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=qa | oc apply -f - -n qa"
+        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "qa", destinationNamespace: "qa", alias: false
+        openshiftVerifyDeployment depCfg: appName, namespace: "qa"
     }
 }

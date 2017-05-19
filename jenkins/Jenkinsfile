@@ -7,6 +7,13 @@ node {
     }
 }
 node("maven") {
+    stage("Check for gradle") {
+        try {
+            sh "gradle --version"
+        } catch (Exception e) {
+            echo "Gradle not present. Continue"
+        }
+    }
     stage("Checkout") {
         git url: "https://github.com/tjololo/springboot-sample-app.git", branch: "master"
     }

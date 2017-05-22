@@ -8,7 +8,7 @@ node {
 }
 node("maven") {
     stage("Checkout") {
-        git url: "https://github.com/tjololo/springboot-sample-app.git", branch: "cicd-sample"
+        git url: "http://gogs:3000/gogs/springboot-sample-app.git", branch: "cicd-sample"
     }
     stage("Gather buildfacts") {
         pom = readMavenPom file: 'pom.xml'
@@ -24,25 +24,25 @@ node {
         unstash name: "jar"
         sh "oc start-build ${appName}-docker --from-file=target/app.jar --follow -n ${project}"
     }
-    stage("Tag image") {
+    stage("Tag image with version " + pom.version) {
         openshiftTag srcStream: appName, srcTag: "latest", destStream: appName, destTag: pom.version, alias: "false"
     }
-    stage("Deploy to dev") {
+    stage("Deploying version " + pom.version + " to dev") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=dev | oc apply -f - -n dev"
         openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "dev", destinationNamespace: "dev", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "dev"
     }
-    stage("Deploy to test") {
+    stage("Deploying version " + pom.version + " to test") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=test | oc apply -f - -n test"
         openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "test", destinationNamespace: "test", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "test"
     }
-    stage("Deploy to QA environment") {
+    stage("Deploy version " + pom.version + " to QA environment") {
         timeout(time: 5, unit: 'MINUTES') {
-            input message: "Deploy to QA?", ok: "GO man, GO!"
+            input message: "Deploy version " + pom.version + " to QA?", ok: "GO man, GO!"
         }
     }
-    stage("Deploy to qa") {
+    stage("Deploying version " + pom.version + " to qa") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=qa | oc apply -f - -n qa"
         openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "qa", destinationNamespace: "qa", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "qa"

@@ -34,12 +34,12 @@ node {
             openshiftTag srcStream: appName, srcTag: "latest", destStream: appName, destTag: v, alias: "false"
         }
     }
-    stage("Deploying version " + pom.version + " to dev") {
-        sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=dev | oc apply -f - -n dev"
-        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "dev", destinationNamespace: "dev", alias: false
+    stage("Set auto deploying of version 0.*.* to dev") {
+        sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=0 | oc apply -f - -n dev"
+        openshiftTag srcStream: appName, srcTag: "0", namespace: project, destStream: appName, destTag: "0", destinationNamespace: "dev"
         openshiftVerifyDeployment depCfg: appName, namespace: "dev"
     }
-    stage("Deploying version " + pom.version + " to test") {
+        stage("Deploying version " + pom.version + " to test") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=test | oc apply -f - -n test"
         openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "test", destinationNamespace: "test", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "test"

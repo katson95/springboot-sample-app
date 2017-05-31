@@ -1,3 +1,6 @@
+String devVersion = "0"
+String testVersion = "0.1"
+String qaVersion = "0.1.0"
 def appName = "springboot-sample-app"
 def project = ""
 def pom
@@ -31,27 +34,26 @@ node {
         openshiftTag srcStream: appName, srcTag: "latest", destStream: appName, destTag: v, alias: "false"
         for (int i = 1; i < versionSplit.length; i++) {
             v += "." + versionSplit[i]
-            openshiftTag srcStream: appName, srcTag: "latest", destStream: appName, destTag: v, alias: "false"
+            openshiftTag srcStream: appName, srcTag: "" +
+                    "latest", destStream: appName, destTag: v, alias: "false"
         }
     }
-    stage("Set auto deploying of version 0.*.* to dev") {
+    stage("Set auto deploying of version " + devVersion + " to dev") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=0 | oc apply -f - -n dev"
-        openshiftTag srcStream: appName, srcTag: "0", namespace: project, destStream: appName, destTag: "0", destinationNamespace: "dev"
+        openshiftTag srcStream: appName, srcTag: devVersion, namespace: project, destStream: appName, destTag: "0", destinationNamespace: "dev", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "dev"
     }
-        stage("Deploying version " + pom.version + " to test") {
+    stage("Deploying version " + testVersion + " to test") {
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=test | oc apply -f - -n test"
-        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "test", destinationNamespace: "test", alias: false
+        openshiftTag srcStream: appName, srcTag: testVersion, namespace: project, destStream: appName, destTag: "test", destinationNamespace: "test", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "test"
     }
-    stage("Deploy version " + pom.version + " to QA environment") {
-        timeout(time: 5, unit: 'MINUTES') {
-            input message: "Deploy version " + pom.version + " to QA?", ok: "GO man, GO!"
-        }
-    }
-    stage("Deploying version " + pom.version + " to qa") {
+    stage("Deploying version " + qaVersion + " to qa") {
+        //timeout(time: 5, unit: 'MINUTES') {
+        //    input message: "Deploy version 0.1 to QA?", ok: "GO man, GO!"
+        //}
         sh "oc process springboot-deployment -n cicd APP_NAME=${appName} IMAGE_TAG=qa | oc apply -f - -n qa"
-        openshiftTag srcStream: appName, srcTag: pom.version, namespace: project, destStream: appName, destTag: "qa", destinationNamespace: "qa", alias: false
+        openshiftTag srcStream: appName, srcTag: qaVersion, namespace: project, destStream: appName, destTag: "qa", destinationNamespace: "qa", alias: false
         openshiftVerifyDeployment depCfg: appName, namespace: "qa"
     }
 }

@@ -1,4 +1,4 @@
-def appName = "gs-spring-boot-docker"
+def appName = "gs-spring-boot"
 def project = ""
 def pom
 node {
